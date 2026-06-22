@@ -1,7 +1,7 @@
-import anthropic
+from groq import Groq
 import os
 
-client = anthropic.Anthropic(api_key=os.getenv("ANTHROPIC_API_KEY"))
+client = Groq(api_key=os.getenv("GROQ_API_KEY"))
 
 STORE_COUNT = 9
 
@@ -38,14 +38,14 @@ Reguli:
 - Maxim 100 de cuvinte
 - Include call-to-action (ex: "Grăbește-te!", "Nu rata!", "Vino azi!")
 - Ton: entuziast, prietenos
-- Hashtag-uri: maxim 3, relevanteE"""
+- Hashtag-uri: maxim 3, relevante"""
 
-    msg = client.messages.create(
-        model="claude-haiku-4-5-20251001",
+    response = client.chat.completions.create(
+        model="llama-3.3-70b-versatile",
         max_tokens=400,
         messages=[{"role": "user", "content": prompt}]
     )
-    return msg.content[0].text.strip()
+    return response.choices[0].message.content.strip()
 
 
 def generate_job_text(post: str, magazine: list, cerinte: str = None) -> str:
@@ -68,9 +68,9 @@ Reguli:
 - Include call-to-action (ex: "Trimite-ne CV-ul!" sau "Sună-ne!")
 - Nu inventa date de contact specifice"""
 
-    msg = client.messages.create(
-        model="claude-haiku-4-5-20251001",
+    response = client.chat.completions.create(
+        model="llama-3.3-70b-versatile",
         max_tokens=450,
         messages=[{"role": "user", "content": prompt}]
     )
-    return msg.content[0].text.strip()
+    return response.choices[0].message.content.strip()
