@@ -13,6 +13,26 @@ _REGULAR_FONTS = [
     "/usr/share/fonts/truetype/ubuntu/Ubuntu-R.ttf",
 ]
 
+_rembg_session = None
+
+
+def _get_rembg_session():
+    global _rembg_session
+    if _rembg_session is None:
+        from rembg import new_session
+        _rembg_session = new_session("u2netp")
+    return _rembg_session
+
+
+def _remove_background(image_bytes: bytes) -> Image.Image:
+    try:
+        from rembg import remove as rembg_remove
+        session = _get_rembg_session()
+        clean_bytes = rembg_remove(image_bytes, session=session)
+        return Image.open(io.BytesIO(clean_bytes)).convert("RGBA")
+    except Exception:
+        return Image.open(io.BytesIO(image_bytes)).convert("RGBA")
+
 
 def _font(size: int, bold: bool = True) -> ImageFont.FreeTypeFont:
     for path in (_BOLD_FONTS if bold else _REGULAR_FONTS):
@@ -28,7 +48,7 @@ def process_promotion_image(image_bytes: bytes, pret: float, discount: int) -> s
     W, H = 1080, 1080
 
     # Warm gradient background
-    bg = Image.new('RGBA', (W, H))
+    bg = Image.new("RGBA", (W, H))
     draw_bg = ImageDraw.Draw(bg)
     for y in range(H):
         t = y / H
@@ -37,28 +57,23 @@ def process_promotion_image(image_bytes: bytes, pret: float, discount: int) -> s
         b = int(10 + t * 10)
         draw_bg.line([(0, y), (W, y)], fill=(r, g, b, 255))
 
-    # Product image
-    try:
-        product = Image.open(io.BytesIO(image_bytes)).convert('RGBA')
-    except Exception:
-        return base64.b64encode(image_bytes).decode()
-
+    # Product image with background removed
+    product = _remove_background(image_bytes)
     product.thumbnail((820, 630), Image.LANCZOS)
     px = (W - product.width) // 2
     py = 55 + (630 - product.height) // 2
     bg.paste(product, (px, py), product)
 
     # White price panel
-    panel = Image.new('RGBA', (W, H), (0, 0, 0, 0))
+    panel = Image.new("RGBA", (W, H), (0, 0, 0, 0))
     ImageDraw.Draw(panel).rounded_rectangle(
         [30, 720, W - 30, H - 68], radius=28, fill=(255, 255, 255, 238)
     )
     bg = Image.alpha_composite(bg, panel)
 
-    final = bg.convert('RGB')
+    final = bg.convert("RGB")
     draw = ImageDraw.Draw(final)
 
-    # Fonts
     f_price = _font(88)
     f_label = _font(36)
     f_old = _font(44)
@@ -88,5 +103,5 @@ def process_promotion_image(image_bytes: bytes, pret: float, discount: int) -> s
     draw.text((W // 2, H - 32), "MIOMAR UNIVERSAL", font=f_brand, fill=(255, 255, 255), anchor="mm")
 
     buf = io.BytesIO()
-    final.save(buf, format='JPEG', quality=92)
+    final.save(buf, format="JPEG", quality=92)
     return base64.b64encode(buf.getvalue()).decode()
