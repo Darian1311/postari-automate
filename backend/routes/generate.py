@@ -1,6 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException, Request, UploadFile, File, Form
 from typing import Optional
-import base64
 import json
 
 from slowapi import Limiter
@@ -10,6 +9,7 @@ from auth import require_auth
 from utils.file_validator import validate_image
 from services.claude_service import generate_promotion_text, generate_job_text
 from services.image_service import generate_job_image
+from services.image_processor import process_promotion_image
 
 router = APIRouter()
 limiter = Limiter(key_func=get_remote_address)
@@ -43,8 +43,8 @@ async def generate_promotie(
     validate_image(image_bytes)
 
     text = generate_promotion_text(produs.strip(), pret, discount, magazine_list, perioada)
-    image_base64 = base64.b64encode(image_bytes).decode("utf-8")
-    image_mime = imagine.content_type or "image/jpeg"
+    image_base64 = process_promotion_image(image_bytes, pret, discount)
+    image_mime = "image/jpeg"
 
     return {"text": text, "image_base64": image_base64, "image_mime": image_mime}
 
